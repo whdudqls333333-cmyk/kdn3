@@ -1,6 +1,13 @@
 import streamlit as st
 import json
+from datetime import date
 from pathlib import Path
+
+try:
+    from streamlit_calendar import calendar as st_calendar
+    CALENDAR_AVAILABLE = True
+except ImportError:
+    CALENDAR_AVAILABLE = False
 
 try:
     from openai import OpenAI
@@ -131,6 +138,8 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+today_str = date.today().isoformat()  # "YYYY-MM-DD"
+
 if "config" not in st.session_state:
     st.session_state.config = load_config()
 if "chat_history" not in st.session_state:
@@ -138,7 +147,10 @@ if "chat_history" not in st.session_state:
 if "api_key_input" not in st.session_state:
     st.session_state.api_key_input = st.session_state.config["api_key"]
 if "schedule" not in st.session_state:
-    st.session_state.schedule = []  # [{"task": str, "done": bool}]
+    # dict keyed by "YYYY-MM-DD": [{"task": str, "detail": str, "done": bool}]
+    st.session_state.schedule = {}
+if "selected_date" not in st.session_state:
+    st.session_state.selected_date = today_str
 
 # ── Sidebar (탭: 설정 / 현재 상태) ──────────────────────────────────────────
 with st.sidebar:
@@ -209,7 +221,7 @@ with st.sidebar:
             st.markdown("**config.json**")
             st.json(raw)
 
-# ── 메인: 상단 헤더 + 챗봇 ───────────────────────────────────────────────────
+# ── 메인: 상단 헤더 ───────────────────────────────────────────────────────────
 st.markdown("""
 <div class="top-header">
     <div>
@@ -219,6 +231,59 @@ st.markdown("""
     <div class="badge">OpenAI GPT</div>
 </div>
 """, unsafe_allow_html=True)
+
+# ── 달력 ─────────────────────────────────────────────────────────────────────
+# 일정 데이터를 FullCalendar 이벤트 형식으로 변환
+calendar_events = []
+for d, items in st.session_state.schedule.items():
+    done_count = sum(1 for it in items if it["done"])
+    total = len(items)
+    if total > 0:
+        color = "#4CAF50" if done_count == total else "#1976D2"
+        calendar_events.append({
+            "title": f"{done_count}/{total} 완료",
+            "start": d,
+            "end": d,
+            "color": color,
+        })
+
+calendar_options = {
+    "initialView": "dayGridMonth",
+    "locale": "ko",
+    "headerToolbar": {
+        "left": "prev,next today",
+        "center": "title",
+        "right": "",
+    },
+    "height": 420,
+    "selectable": True,
+    "dateClick": True,
+}
+
+custom_css = """
+.fc-event { font-size: 11px; padding: 1px 4px; border-radius: 4px; }
+.fc-day-today { background-color: rgba(25, 118, 210, 0.08) !important; }
+.fc-toolbar-title { font-size: 16px !important; font-weight: 700; }
+.fc-button { font-size: 12px !important; padding: 3px 8px !important; }
+"""
+
+if CALENDAR_AVAILABLE:
+    cal_result = st_calendar(
+        events=calendar_events,
+        options=calendar_options,
+        custom_css=custom_css,
+        key="main_calendar",
+    )
+    # dateClick 이벤트로 날짜 선택
+    if cal_result and cal_result.get("dateClick"):
+        clicked = cal_result["dateClick"].get("date", "")[:10]
+        if clicked:
+            st.session_state.selected_date = clicked
+            st.rerun()
+else:
+    st.info("달력을 표시하려면 `pip install streamlit-calendar`를 실행하세요.")
+
+st.divider()
 
 col_chat, col_schedule = st.columns([3, 1])
 
@@ -266,33 +331,46 @@ with col_chat:
 
 # ── 일정 상세 팝업 ────────────────────────────────────────────────────────────
 @st.dialog("📋 일정 상세")
-def show_detail(idx: int):
-    item = st.session_state.schedule[idx]
+def show_detail(date_key: str, idx: int):
+    item = st.session_state.schedule[date_key][idx]
     st.markdown(f"### {item['task']}")
+    st.caption(date_key)
     st.divider()
     st.markdown(item["detail"] if item["detail"] else "_세부 내용이 없습니다._")
     st.divider()
     done_label = "✅ 완료 취소" if item["done"] else "☑️ 완료 처리"
     if st.button(done_label, use_container_width=True):
-        st.session_state.schedule[idx]["done"] = not item["done"]
+        st.session_state.schedule[date_key][idx]["done"] = not item["done"]
         st.rerun()
 
-# ── 우측: 오늘의 일정 ─────────────────────────────────────────────────────────
+# ── 우측: 선택된 날짜의 일정 ───────────────────────────────────────────────────
 with col_schedule:
-    from datetime import date
-    today = date.today().strftime("%Y년 %m월 %d일")
+    sel = st.session_state.selected_date
+    try:
+        sel_date = date.fromisoformat(sel)
+        display_date = sel_date.strftime("%Y년 %m월 %d일")
+    except Exception:
+        display_date = sel
+
+    is_today = (sel == today_str)
+    date_label = f"{'📅 오늘' if is_today else '📅'} {display_date}"
 
     with st.container(border=True):
-        st.markdown("#### 📅 오늘의 일정")
-        st.caption(today)
+        st.markdown(f"#### {date_label}")
+        if not is_today:
+            if st.button("오늘로 이동", use_container_width=True):
+                st.session_state.selected_date = today_str
+                st.rerun()
 
-        # 일정 추가 폼 (타이틀 + 세부내용)
+        # 일정 추가 폼
         with st.form("add_schedule", clear_on_submit=True):
             new_task = st.text_input("타이틀", placeholder="일정 제목을 입력하세요")
             new_detail = st.text_area("세부내용", placeholder="세부 내용을 입력하세요 (선택)", height=80)
             if st.form_submit_button("+ 추가", use_container_width=True):
                 if new_task.strip():
-                    st.session_state.schedule.append({
+                    if sel not in st.session_state.schedule:
+                        st.session_state.schedule[sel] = []
+                    st.session_state.schedule[sel].append({
                         "task": new_task.strip(),
                         "detail": new_detail.strip(),
                         "done": False,
@@ -302,43 +380,47 @@ with col_schedule:
         st.divider()
 
         # 일정 목록
-        if not st.session_state.schedule:
+        items = st.session_state.schedule.get(sel, [])
+        if not items:
             st.caption("등록된 일정이 없습니다.")
         else:
-            done_count = sum(1 for s in st.session_state.schedule if s["done"])
-            total = len(st.session_state.schedule)
+            done_count = sum(1 for s in items if s["done"])
+            total = len(items)
             st.progress(done_count / total, text=f"{done_count}/{total} 완료")
 
             to_delete = []
-            for i, item in enumerate(st.session_state.schedule):
+            for i, item in enumerate(items):
                 c_chk, c_title, c_del = st.columns([1, 5, 1])
                 with c_chk:
-                    checked = st.checkbox("", value=item["done"], key=f"sched_{i}",
+                    checked = st.checkbox("", value=item["done"], key=f"sched_{sel}_{i}",
                                          label_visibility="collapsed")
                     if checked != item["done"]:
-                        st.session_state.schedule[i]["done"] = checked
+                        st.session_state.schedule[sel][i]["done"] = checked
                         st.rerun()
                 with c_title:
                     label = f"~~{item['task']}~~" if item["done"] else item["task"]
-                    if st.button(label, key=f"detail_{i}", use_container_width=True,
-                                 type="tertiary" if not item["done"] else "tertiary"):
-                        show_detail(i)
+                    if st.button(label, key=f"detail_{sel}_{i}", use_container_width=True,
+                                 type="tertiary"):
+                        show_detail(sel, i)
                 with c_del:
-                    if st.button("✕", key=f"del_{i}", help="삭제"):
+                    if st.button("✕", key=f"del_{sel}_{i}", help="삭제"):
                         to_delete.append(i)
 
             if to_delete:
-                st.session_state.schedule = [
-                    s for j, s in enumerate(st.session_state.schedule)
-                    if j not in to_delete
+                st.session_state.schedule[sel] = [
+                    s for j, s in enumerate(items) if j not in to_delete
                 ]
+                if not st.session_state.schedule[sel]:
+                    del st.session_state.schedule[sel]
                 st.rerun()
 
             if done_count == total:
                 st.success("모든 일정 완료! 🎉")
 
             if st.button("완료 항목 삭제", use_container_width=True):
-                st.session_state.schedule = [
-                    s for s in st.session_state.schedule if not s["done"]
+                st.session_state.schedule[sel] = [
+                    s for s in items if not s["done"]
                 ]
+                if not st.session_state.schedule[sel]:
+                    del st.session_state.schedule[sel]
                 st.rerun()
