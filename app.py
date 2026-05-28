@@ -380,7 +380,38 @@ st.markdown("""
 <style>
 [data-testid="stForm"] { display: none !important; }
 
-/* 사이드바 전체 폰트 축소 */
+/* ── 상단 헤더 ── */
+.top-header {
+    width: 100%;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    color: white;
+    padding: 18px 32px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.top-header .main-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+}
+.top-header .sub-title {
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    margin-top: 3px;
+}
+.top-header .badge {
+    background: #fee500;
+    color: #111;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+/* ── 사이드바 폰트 축소 ── */
 [data-testid="stSidebar"] { font-size: 12px !important; }
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] label,
@@ -477,7 +508,15 @@ with st.sidebar:
             st.json(raw)
 
 # ── 메인: 챗봇 화면 ──────────────────────────────────────────────────────────
-st.title("💬 OpenAI 챗봇")
+st.markdown("""
+<div class="top-header">
+    <div>
+        <div class="main-title">서비스 타이틀</div>
+        <div class="sub-title">부제목 또는 설명 문구를 입력하세요</div>
+    </div>
+    <div class="badge">OpenAI GPT</div>
+</div>
+""", unsafe_allow_html=True)
 
 if not st.session_state.config["api_key"]:
     st.warning("왼쪽 사이드바 **🔧 설정** 탭에서 API 키를 입력하고 저장하세요.")
