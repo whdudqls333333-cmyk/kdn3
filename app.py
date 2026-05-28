@@ -10,13 +10,7 @@ except ImportError:
 
 CONFIG_FILE = "config.json"
 
-AVAILABLE_MODELS = [
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-4-turbo",
-    "gpt-4",
-    "gpt-3.5-turbo",
-]
+AVAILABLE_MODELS = ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]
 
 DEFAULT_CONFIG = {
     "api_key": "",
@@ -74,7 +68,7 @@ st.set_page_config(page_title="OpenAI 챗봇", page_icon="🤖", layout="wide")
 
 st.markdown("""
 <style>
-/* ── 상단 헤더 ── */
+/* ── 상단 헤더 배너 ── */
 .top-header {
     width: 100%;
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
@@ -86,26 +80,46 @@ st.markdown("""
     align-items: center;
     justify-content: space-between;
 }
-.top-header .main-title {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.3px;
-}
-.top-header .sub-title {
-    font-size: 12px;
-    color: rgba(255,255,255,0.55);
-    margin-top: 3px;
-}
+.top-header .main-title { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+.top-header .sub-title  { font-size: 12px; color: rgba(255,255,255,0.55); margin-top: 3px; }
 .top-header .badge {
-    background: #fee500;
-    color: #111;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 20px;
+    background: #fee500; color: #111;
+    font-size: 11px; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px;
 }
 
-/* ── 공유·배포·별표 버튼만 숨김 (사이드바 토글 유지) ── */
+/* ── 대시보드 카드 ── */
+.dash-card {
+    background: white;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.dash-card h4 { margin: 0 0 6px; font-size: 14px; color: #888; font-weight: 500; }
+.dash-card .val { font-size: 26px; font-weight: 700; color: #1a1a2e; }
+
+/* ── 사이드바 메뉴 버튼 ── */
+[data-testid="stSidebar"] .menu-btn button {
+    background: transparent !important;
+    border: none !important;
+    text-align: left !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    font-size: 13px !important;
+    color: #333 !important;
+    font-weight: 500 !important;
+}
+[data-testid="stSidebar"] .menu-btn button:hover {
+    background: #f0f0f0 !important;
+}
+.menu-active button {
+    background: #1a1a2e !important;
+    color: white !important;
+}
+
+/* ── Streamlit 기본 UI 요소 숨김 ── */
 [data-testid="stDeployButton"]   { display: none !important; }
 [data-testid="stStarButton"]     { display: none !important; }
 [data-testid="stMainMenuButton"] { display: none !important; }
@@ -117,8 +131,7 @@ st.markdown("""
 [data-testid="stSidebar"] { font-size: 12px !important; }
 [data-testid="stSidebar"] p,
 [data-testid="stSidebar"] label,
-[data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div { font-size: 12px !important; }
+[data-testid="stSidebar"] span { font-size: 12px !important; }
 [data-testid="stSidebar"] h1 { font-size: 16px !important; }
 [data-testid="stSidebar"] h2,
 [data-testid="stSidebar"] h3 { font-size: 13px !important; }
@@ -131,15 +144,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# ── Session state ─────────────────────────────────────────────────────────────
 if "config" not in st.session_state:
     st.session_state.config = load_config()
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "api_key_input" not in st.session_state:
     st.session_state.api_key_input = st.session_state.config["api_key"]
+if "page" not in st.session_state:
+    st.session_state.page = "dashboard"
 
-# ── Sidebar (탭: 설정 / 현재 상태) ──────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
+    st.markdown("### 메뉴")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📊 대시보드", use_container_width=True,
+                     type="primary" if st.session_state.page == "dashboard" else "secondary"):
+            st.session_state.page = "dashboard"
+            st.rerun()
+    with col2:
+        if st.button("💬 챗봇", use_container_width=True,
+                     type="primary" if st.session_state.page == "chatbot" else "secondary"):
+            st.session_state.page = "chatbot"
+            st.rerun()
+
+    st.divider()
+
     with st.expander("⚙️ 시스템 설정", expanded=False):
         tab_cfg, tab_status = st.tabs(["🔧 설정", "📊 현재 상태"])
 
@@ -157,8 +189,7 @@ with st.sidebar:
             "모델 선택",
             options=AVAILABLE_MODELS,
             index=AVAILABLE_MODELS.index(st.session_state.config["model"])
-            if st.session_state.config["model"] in AVAILABLE_MODELS
-            else 0,
+            if st.session_state.config["model"] in AVAILABLE_MODELS else 0,
         )
         temperature = st.slider("Temperature", 0.0, 2.0,
                                 float(st.session_state.config["temperature"]), 0.05)
@@ -189,7 +220,6 @@ with st.sidebar:
         cfg = st.session_state.config
         key = cfg["api_key"]
         masked = key[:7] + "..." + key[-4:] if len(key) > 11 else ("(미입력)" if not key else key)
-
         st.subheader("현재 적용된 설정")
         st.metric("API Key", masked)
         st.metric("모델", cfg["model"])
@@ -198,7 +228,6 @@ with st.sidebar:
         st.metric("Top P", cfg["top_p"])
         st.markdown("**System Prompt**")
         st.info(cfg["system_prompt"])
-
         if Path(CONFIG_FILE).exists():
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 raw = json.load(f)
@@ -207,7 +236,7 @@ with st.sidebar:
             st.markdown("**config.json**")
             st.json(raw)
 
-# ── 메인: 상단 헤더 + 챗봇 ───────────────────────────────────────────────────
+# ── 상단 배너 (공통) ──────────────────────────────────────────────────────────
 st.markdown("""
 <div class="top-header">
     <div>
@@ -218,48 +247,93 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-if not st.session_state.config["api_key"]:
-    st.warning("왼쪽 사이드바 **🔧 설정** 탭에서 API 키를 입력하고 저장하세요.")
-elif not OPENAI_AVAILABLE:
-    st.error("openai 패키지가 필요합니다: `pip install openai`")
-else:
-    # 대화 기록 출력 (테두리 컨테이너)
-    with st.container(border=True):
-        for msg in st.session_state.chat_history:
-            with st.chat_message(msg["role"]):
-                st.write(msg["content"])
-        if not st.session_state.chat_history:
-            st.caption("대화를 시작해보세요.")
+# ── 대시보드 페이지 ───────────────────────────────────────────────────────────
+if st.session_state.page == "dashboard":
+    cfg = st.session_state.config
+    key = cfg["api_key"]
+    masked = key[:7] + "..." + key[-4:] if len(key) > 11 else ("(미입력)" if not key else key)
+    chat_count = len(st.session_state.chat_history)
+    user_turns = sum(1 for m in st.session_state.chat_history if m["role"] == "user")
 
-    # 대화 초기화 버튼
-    if st.session_state.chat_history:
-        if st.button("🗑️ 대화 초기화"):
-            st.session_state.chat_history = []
-            st.rerun()
+    # 요약 카드
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric("사용 모델", cfg["model"])
+    with c2:
+        st.metric("API Key", masked)
+    with c3:
+        st.metric("총 메시지 수", chat_count)
+    with c4:
+        st.metric("내 질문 수", user_turns)
 
-    # 메시지 입력
-    if prompt := st.chat_input("메시지를 입력하세요..."):
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
+    st.divider()
 
-        with st.chat_message("assistant"):
-            with st.spinner("답변 생성 중..."):
-                try:
-                    api_msgs = [{"role": m["role"], "content": m["content"]}
-                                for m in st.session_state.chat_history]
-                    reply = send_message(
-                        st.session_state.config["api_key"],
-                        st.session_state.config,
-                        api_msgs,
-                    )
-                    st.write(reply)
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": reply}
-                    )
-                except Exception as e:
-                    err = f"오류: {e}"
-                    st.error(err)
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": err}
-                    )
+    col_l, col_r = st.columns([1, 1])
+    with col_l:
+        st.subheader("모델 파라미터")
+        with st.container(border=True):
+            st.markdown(f"**Temperature** : `{cfg['temperature']}`")
+            st.markdown(f"**Max Tokens** : `{cfg['max_tokens']}`")
+            st.markdown(f"**Top P** : `{cfg['top_p']}`")
+            st.markdown(f"**System Prompt**")
+            st.info(cfg["system_prompt"])
+
+    with col_r:
+        st.subheader("이용 안내")
+        with st.container(border=True):
+            st.markdown("""
+**1. 시스템 설정**
+왼쪽 사이드바 ▸ ⚙️ 시스템 설정을 열어 API Key와 모델을 설정하세요.
+
+**2. 챗봇 사용**
+사이드바 메뉴 ▸ 💬 챗봇을 클릭하면 대화를 시작할 수 있습니다.
+
+**3. 연결 테스트**
+설정 저장 후 🔗 테스트 버튼으로 API 연결 상태를 확인하세요.
+""")
+
+    if st.button("💬 챗봇 시작하기", type="primary"):
+        st.session_state.page = "chatbot"
+        st.rerun()
+
+# ── 챗봇 페이지 ───────────────────────────────────────────────────────────────
+elif st.session_state.page == "chatbot":
+    if not st.session_state.config["api_key"]:
+        st.warning("왼쪽 사이드바 **⚙️ 시스템 설정 > 🔧 설정** 탭에서 API 키를 입력하고 저장하세요.")
+    elif not OPENAI_AVAILABLE:
+        st.error("openai 패키지가 필요합니다: `pip install openai`")
+    else:
+        with st.container(border=True):
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.write(msg["content"])
+            if not st.session_state.chat_history:
+                st.caption("대화를 시작해보세요.")
+
+        if st.session_state.chat_history:
+            if st.button("🗑️ 대화 초기화"):
+                st.session_state.chat_history = []
+                st.rerun()
+
+        if prompt := st.chat_input("메시지를 입력하세요..."):
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.write(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("답변 생성 중..."):
+                    try:
+                        api_msgs = [{"role": m["role"], "content": m["content"]}
+                                    for m in st.session_state.chat_history]
+                        reply = send_message(
+                            st.session_state.config["api_key"],
+                            st.session_state.config,
+                            api_msgs,
+                        )
+                        st.write(reply)
+                        st.session_state.chat_history.append(
+                            {"role": "assistant", "content": reply})
+                    except Exception as e:
+                        err = f"오류: {e}"
+                        st.error(err)
+                        st.session_state.chat_history.append(
+                            {"role": "assistant", "content": err})
