@@ -383,16 +383,21 @@ html, body {{
 st.set_page_config(page_title="OpenAI 설정 관리", page_icon="⚙️", layout="wide")
 st.title("⚙️ OpenAI API 설정 관리")
 
-# Streamlit 기본 chat_input을 숨김 (JS 브리지가 내부적으로 사용)
+# Streamlit 기본 chat_input을 완전히 화면 밖으로 추방
 st.markdown("""
 <style>
-section[data-testid="stBottom"] {
-    opacity: 0 !important;
+section[data-testid="stBottom"],
+section[data-testid="stBottom"] * {
     position: fixed !important;
-    bottom: 0 !important;
-    pointer-events: none !important;
-    height: 56px !important;
+    top: -9999px !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
     overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    z-index: -9999 !important;
+    clip: rect(0 0 0 0) !important;
 }
 </style>
 """, unsafe_allow_html=True)
