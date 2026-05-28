@@ -105,11 +105,10 @@ st.markdown("""
     border-radius: 20px;
 }
 
-/* ── 상단 툴바 + 여백 제거 ── */
-[data-testid="stToolbar"],
-[data-testid="stHeader"],
-#MainMenu,
-header { display: none !important; }
+/* ── 상단 툴바(공유·별표)만 숨김, 사이드바 토글은 유지 ── */
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stDecoration"] { display: none !important; }
+#MainMenu { display: none !important; }
 .block-container { padding-top: 1rem !important; }
 
 /* ── 사이드바 폰트 축소 ── */
