@@ -215,10 +215,13 @@ if not st.session_state.config["api_key"]:
 elif not OPENAI_AVAILABLE:
     st.error("openai 패키지가 필요합니다: `pip install openai`")
 else:
-    # 대화 기록 출력
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+    # 대화 기록 출력 (테두리 컨테이너)
+    with st.container(border=True):
+        for msg in st.session_state.chat_history:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
+        if not st.session_state.chat_history:
+            st.caption("대화를 시작해보세요.")
 
     # 대화 초기화 버튼
     if st.session_state.chat_history:
