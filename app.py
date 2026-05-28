@@ -1,7 +1,5 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import json
-from datetime import datetime
 from pathlib import Path
 
 try:
@@ -71,315 +69,11 @@ def send_message(api_key: str, config: dict, messages: list) -> str:
     return r.choices[0].message.content
 
 
-def build_messenger_html(messages: list, model_name: str) -> str:
-    date_str = datetime.now().strftime("%Y년 %m월 %d일")
-
-    rows = ""
-    for msg in messages:
-        ts = msg.get("time", "")
-        content = (
-            msg["content"]
-            .replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\n", "<br>")
-        )
-        if msg["role"] == "user":
-            rows += f"""
-            <div class="msg-row user">
-                <div class="ts">{ts}</div>
-                <div class="bubble user">{content}</div>
-            </div>"""
-        else:
-            rows += f"""
-            <div class="msg-row bot">
-                <div class="avatar">🤖</div>
-                <div class="bubble-col">
-                    <div class="sender">{model_name}</div>
-                    <div class="bubble bot">{content}</div>
-                </div>
-                <div class="ts">{ts}</div>
-            </div>"""
-
-    body = rows if rows else '<p class="empty">대화를 시작해보세요 👋</p>'
-
-    return f"""<!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
-<style>
-* {{ box-sizing: border-box; margin: 0; padding: 0; }}
-html, body {{
-    height: 100%;
-    font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', Arial, sans-serif;
-    font-size: 14px;
-    background: #b2c7d9;
-}}
-.wrap {{
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-}}
-
-/* ── 헤더 ── */
-.header {{
-    background: #3c1e1e;
-    color: #fff;
-    padding: 12px 16px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
-}}
-.h-icon {{
-    width: 38px; height: 38px;
-    background: #fee500;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-}}
-.h-name {{ font-weight: 700; font-size: 15px; }}
-.h-status {{ font-size: 11px; color: #aaa; margin-top: 1px; }}
-
-/* ── 메시지 영역 ── */
-.body {{
-    flex: 1;
-    overflow-y: auto;
-    padding: 14px 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: #b2c7d9;
-}}
-.date-chip {{
-    font-size: 11px;
-    color: #fff;
-    background: rgba(0,0,0,.22);
-    border-radius: 10px;
-    padding: 3px 12px;
-    text-align: center;
-    width: fit-content;
-    margin: 2px auto 6px;
-}}
-.empty {{
-    text-align: center;
-    color: rgba(255,255,255,.8);
-    font-size: 13px;
-    margin-top: 60px;
-}}
-
-/* ── 메시지 행 ── */
-.msg-row {{
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-}}
-.msg-row.user {{ justify-content: flex-end; }}
-.msg-row.bot  {{ justify-content: flex-start; }}
-
-.avatar {{
-    width: 36px; height: 36px;
-    background: #fee500;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-    align-self: flex-start;
-}}
-.bubble-col {{
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    max-width: 68%;
-}}
-.sender {{
-    font-size: 11px;
-    color: #333;
-    padding-left: 4px;
-    margin-bottom: 2px;
-}}
-.bubble {{
-    padding: 9px 13px;
-    font-size: 13.5px;
-    line-height: 1.55;
-    word-break: break-word;
-    white-space: pre-wrap;
-    max-width: 68vw;
-}}
-.bubble.user {{
-    background: #fee500;
-    color: #111;
-    border-radius: 18px 18px 4px 18px;
-}}
-.bubble.bot {{
-    background: #fff;
-    color: #111;
-    border-radius: 4px 18px 18px 18px;
-}}
-.ts {{
-    font-size: 10px;
-    color: rgba(0,0,0,.38);
-    flex-shrink: 0;
-    margin-bottom: 3px;
-}}
-
-/* ── 입력창 ── */
-.footer {{
-    background: #f0f0f0;
-    border-top: 1px solid #ddd;
-    padding: 8px 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}}
-.plus-btn {{
-    width: 32px; height: 32px;
-    border: 1.5px solid #aaa;
-    border-radius: 50%;
-    background: none;
-    color: #888;
-    font-size: 20px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    line-height: 1;
-}}
-.msg-input {{
-    flex: 1;
-    border: 1.5px solid #ddd;
-    border-radius: 22px;
-    padding: 9px 16px;
-    font-size: 13.5px;
-    font-family: inherit;
-    outline: none;
-    background: #fff;
-    resize: none;
-    min-height: 38px;
-    max-height: 90px;
-    line-height: 1.4;
-    overflow-y: auto;
-    transition: border-color .15s;
-}}
-.msg-input:focus {{ border-color: #aaa; }}
-.send-btn {{
-    width: 38px; height: 38px;
-    background: #fee500;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 18px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-    transition: background .1s;
-}}
-.send-btn:hover {{ background: #f0d800; }}
-.send-btn:active {{ background: #e0c800; transform: scale(.94); }}
-</style>
-</head>
-<body>
-<div class="wrap">
-
-  <!-- 헤더 -->
-  <div class="header">
-    <div class="h-icon">🤖</div>
-    <div>
-      <div class="h-name">{model_name}</div>
-      <div class="h-status">Online</div>
-    </div>
-  </div>
-
-  <!-- 메시지 -->
-  <div class="body" id="chatBody">
-    <div class="date-chip">{date_str}</div>
-    {body}
-  </div>
-
-  <!-- 입력창 -->
-  <div class="footer">
-    <button class="plus-btn" type="button" onclick="return false">+</button>
-    <textarea id="msgInput" class="msg-input"
-              placeholder="메시지를 입력하세요..." rows="1"></textarea>
-    <button id="sendBtn" class="send-btn" type="button">&#10148;</button>
-  </div>
-
-</div>
-<script>
-(function () {{
-  /* 자동 스크롤 */
-  var chatBody = document.getElementById('chatBody');
-  if (chatBody) chatBody.scrollTop = chatBody.scrollHeight;
-
-  /* textarea 자동 높이 */
-  var msgInput = document.getElementById('msgInput');
-  msgInput.addEventListener('input', function () {{
-    this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 90) + 'px';
-  }});
-
-  /* Streamlit form 브리지 — st.form(hidden) 을 타겟 */
-  function triggerStreamlit(text) {{
-    try {{
-      var pd = window.parent.document;
-      /* 숨겨진 st.form 안의 input 탐색 */
-      var formWrap = pd.querySelector('[data-testid="stForm"]');
-      if (!formWrap) {{ console.warn('[Bridge] stForm not found'); return false; }}
-
-      var inp = formWrap.querySelector('input');
-      if (!inp) {{ console.warn('[Bridge] input not found'); return false; }}
-
-      /* React 내부 setter로 값 주입 */
-      var setter = Object.getOwnPropertyDescriptor(
-        window.parent.HTMLInputElement.prototype, 'value'
-      ).set;
-      setter.call(inp, text);
-      inp.dispatchEvent(new window.parent.Event('input', {{ bubbles: true }}));
-      inp.dispatchEvent(new window.parent.Event('change', {{ bubbles: true }}));
-
-      /* 제출 버튼 클릭 */
-      var btn = formWrap.querySelector('[data-testid="stFormSubmitButton"] button') ||
-                formWrap.querySelector('button');
-      if (btn) {{
-        setTimeout(function () {{ btn.click(); }}, 100);
-        return true;
-      }}
-    }} catch (e) {{
-      console.warn('[Bridge] error:', e);
-    }}
-    return false;
-  }}
-
-  function send() {{
-    var text = msgInput.value.trim();
-    if (!text) return;
-    var ok = triggerStreamlit(text);
-    if (ok) {{
-      msgInput.value = '';
-      msgInput.style.height = 'auto';
-      msgInput.focus();
-    }}
-  }}
-
-  document.getElementById('sendBtn').addEventListener('click', send);
-  msgInput.addEventListener('keydown', function (e) {{
-    if (e.key === 'Enter' && !e.shiftKey) {{
-      e.preventDefault();
-      send();
-    }}
-  }});
-}})();
-</script>
-</body>
-</html>"""
-
-
 # ── Page setup ───────────────────────────────────────────────────────────────
 st.set_page_config(page_title="OpenAI 챗봇", page_icon="🤖", layout="wide")
 
 st.markdown("""
 <style>
-[data-testid="stForm"] { display: none !important; }
-
 /* ── 상단 헤더 ── */
 .top-header {
     width: 100%;
@@ -441,7 +135,6 @@ with st.sidebar:
     st.title("⚙️ 관리 패널")
     tab_cfg, tab_status = st.tabs(["🔧 설정", "📊 현재 상태"])
 
-    # ── 설정 탭 ──
     with tab_cfg:
         st.subheader("🔑 API 설정")
         api_key = st.text_input(
@@ -484,7 +177,6 @@ with st.sidebar:
                     ok, msg = test_connection(api_key, model)
                 (st.success if ok else st.error)(msg)
 
-    # ── 현재 상태 탭 ──
     with tab_status:
         cfg = st.session_state.config
         key = cfg["api_key"]
@@ -507,7 +199,7 @@ with st.sidebar:
             st.markdown("**config.json**")
             st.json(raw)
 
-# ── 메인: 챗봇 화면 ──────────────────────────────────────────────────────────
+# ── 메인: 상단 헤더 + 챗봇 ───────────────────────────────────────────────────
 st.markdown("""
 <div class="top-header">
     <div>
@@ -523,45 +215,40 @@ if not st.session_state.config["api_key"]:
 elif not OPENAI_AVAILABLE:
     st.error("openai 패키지가 필요합니다: `pip install openai`")
 else:
-    model_name = st.session_state.config["model"]
+    # 대화 기록 출력
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
-    components.html(
-        build_messenger_html(st.session_state.chat_history, model_name),
-        height=580,
-        scrolling=False,
-    )
-
+    # 대화 초기화 버튼
     if st.session_state.chat_history:
         if st.button("🗑️ 대화 초기화"):
             st.session_state.chat_history = []
             st.rerun()
 
-    # 숨겨진 브리지 form
-    with st.form("chat_bridge", clear_on_submit=True):
-        bridge_text = st.text_input("_msg", label_visibility="hidden")
-        bridge_submit = st.form_submit_button("전송")
+    # 메시지 입력
+    if prompt := st.chat_input("메시지를 입력하세요..."):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
 
-    if bridge_submit and bridge_text:
-        now = datetime.now().strftime("%H:%M")
-        st.session_state.chat_history.append(
-            {"role": "user", "content": bridge_text, "time": now}
-        )
-        try:
-            api_msgs = [{"role": m["role"], "content": m["content"]}
-                        for m in st.session_state.chat_history]
+        with st.chat_message("assistant"):
             with st.spinner("답변 생성 중..."):
-                reply = send_message(
-                    st.session_state.config["api_key"],
-                    st.session_state.config,
-                    api_msgs,
-                )
-            st.session_state.chat_history.append(
-                {"role": "assistant", "content": reply,
-                 "time": datetime.now().strftime("%H:%M")}
-            )
-        except Exception as e:
-            st.session_state.chat_history.append(
-                {"role": "assistant", "content": f"오류: {e}",
-                 "time": datetime.now().strftime("%H:%M")}
-            )
-        st.rerun()
+                try:
+                    api_msgs = [{"role": m["role"], "content": m["content"]}
+                                for m in st.session_state.chat_history]
+                    reply = send_message(
+                        st.session_state.config["api_key"],
+                        st.session_state.config,
+                        api_msgs,
+                    )
+                    st.write(reply)
+                    st.session_state.chat_history.append(
+                        {"role": "assistant", "content": reply}
+                    )
+                except Exception as e:
+                    err = f"오류: {e}"
+                    st.error(err)
+                    st.session_state.chat_history.append(
+                        {"role": "assistant", "content": err}
+                    )
