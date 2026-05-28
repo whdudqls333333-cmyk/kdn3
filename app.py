@@ -258,10 +258,11 @@ with col_cal:
         if total > 0:
             color = "#4CAF50" if done_count == total else "#1976D2"
             calendar_events.append({
-                "title": f"{done_count}/{total} 완료",
+                "title": "",
                 "start": d,
-                "end": d,
-                "color": color,
+                "backgroundColor": color,
+                "borderColor": color,
+                "display": "list-item",
             })
 
     calendar_options = {
@@ -278,12 +279,25 @@ with col_cal:
     }
 
     custom_css = """
-    .fc-event { font-size: 11px; padding: 1px 4px; border-radius: 4px; }
     .fc-day-today { background-color: rgba(25, 118, 210, 0.08) !important; }
     .fc-toolbar-title { font-size: 15px !important; font-weight: 700; }
     .fc-button { font-size: 11px !important; padding: 2px 7px !important; }
     .fc-col-header-cell { font-size: 12px !important; }
     .fc-daygrid-day-number { font-size: 12px !important; }
+    .fc-daygrid-event-dot {
+        width: 8px !important;
+        height: 8px !important;
+        border-radius: 50% !important;
+        border-width: 4px !important;
+        margin: 0 auto !important;
+    }
+    .fc-daygrid-event.fc-daygrid-dot-event {
+        justify-content: center !important;
+        padding: 1px 0 !important;
+    }
+    .fc-daygrid-event.fc-daygrid-dot-event .fc-event-title {
+        display: none !important;
+    }
     """
 
     if CALENDAR_AVAILABLE:
