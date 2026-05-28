@@ -139,7 +139,7 @@ if "api_key_input" not in st.session_state:
 
 # ── Sidebar (탭: 설정 / 현재 상태) ──────────────────────────────────────────
 with st.sidebar:
-    with st.expander("⚙️ 시스템 설정", expanded=True):
+    with st.expander("⚙️ 시스템 설정", expanded=False):
         tab_cfg, tab_status = st.tabs(["🔧 설정", "📊 현재 상태"])
 
     with tab_cfg:
