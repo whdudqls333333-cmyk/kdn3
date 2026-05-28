@@ -303,16 +303,33 @@ with col_cal:
     .fc-button { font-size: 11px !important; padding: 2px 7px !important; }
     .fc-col-header-cell { font-size: 12px !important; }
     .fc-daygrid-day-number { font-size: 12px !important; }
+    .fc-daygrid-day-events {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 2px !important;
+        padding: 0 2px 2px !important;
+        min-height: unset !important;
+    }
+    .fc-daygrid-event-harness {
+        flex: none !important;
+        width: auto !important;
+        margin: 0 !important;
+    }
     .fc-daygrid-event-dot {
-        width: 8px !important;
-        height: 8px !important;
+        width: 7px !important;
+        height: 7px !important;
         border-radius: 50% !important;
-        border-width: 4px !important;
-        margin: 0 auto !important;
+        border-width: 3.5px !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
     }
     .fc-daygrid-event.fc-daygrid-dot-event {
-        justify-content: center !important;
-        padding: 1px 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
     }
     .fc-daygrid-event.fc-daygrid-dot-event .fc-event-title {
         display: none !important;
