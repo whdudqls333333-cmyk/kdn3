@@ -211,8 +211,8 @@ with st.sidebar:
 st.markdown("""
 <div class="top-header">
     <div>
-        <div class="main-title">서비스 타이틀</div>
-        <div class="sub-title">부제목 또는 설명 문구를 입력하세요</div>
+        <div class="main-title">KDN 업무 지원 AI</div>
+        <div class="sub-title">업무 질문부터 문서 작성까지, AI가 함께합니다</div>
     </div>
     <div class="badge">OpenAI GPT</div>
 </div>
