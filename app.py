@@ -111,7 +111,7 @@ st.markdown("""
 [data-testid="stMainMenuButton"] { display: none !important; }
 [data-testid="stDecoration"]     { display: none !important; }
 #MainMenu { display: none !important; }
-.block-container { padding-top: 1rem !important; }
+.block-container { padding-top: 3rem !important; }
 
 /* ── 사이드바 폰트 축소 ── */
 [data-testid="stSidebar"] { font-size: 12px !important; }
