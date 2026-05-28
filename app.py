@@ -374,15 +374,11 @@ html, body {{
 
 
 # ── Page setup ───────────────────────────────────────────────────────────────
-st.set_page_config(page_title="OpenAI 설정 관리", page_icon="⚙️", layout="wide")
-st.title("⚙️ OpenAI API 설정 관리")
+st.set_page_config(page_title="OpenAI 챗봇", page_icon="🤖", layout="wide")
 
-# 브리지용 hidden form 을 완전히 숨김 (display:none 은 JS click 에도 동작함)
 st.markdown("""
 <style>
-[data-testid="stForm"] {
-    display: none !important;
-}
+[data-testid="stForm"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -393,121 +389,124 @@ if "chat_history" not in st.session_state:
 if "api_key_input" not in st.session_state:
     st.session_state.api_key_input = st.session_state.config["api_key"]
 
-# ── Sidebar ──────────────────────────────────────────────────────────────────
+# ── Sidebar (탭: 설정 / 현재 상태) ──────────────────────────────────────────
 with st.sidebar:
-    st.header("🔑 API 설정")
-    api_key = st.text_input(
-        "OpenAI API Key",
-        value=st.session_state.api_key_input,
-        type="password",
-        placeholder="sk-...",
-    )
-    st.divider()
-    st.header("🤖 모델 설정")
-    model = st.selectbox(
-        "모델 선택",
-        options=AVAILABLE_MODELS,
-        index=AVAILABLE_MODELS.index(st.session_state.config["model"])
-        if st.session_state.config["model"] in AVAILABLE_MODELS
-        else 0,
-    )
-    temperature = st.slider("Temperature", 0.0, 2.0,
-                            float(st.session_state.config["temperature"]), 0.05)
-    max_tokens  = st.slider("Max Tokens", 64, 4096,
-                            int(st.session_state.config["max_tokens"]), 64)
-    top_p       = st.slider("Top P", 0.0, 1.0,
-                            float(st.session_state.config["top_p"]), 0.05)
-    system_prompt = st.text_area("System Prompt",
-                                 value=st.session_state.config["system_prompt"],
-                                 height=100)
-    st.divider()
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("💾 저장", use_container_width=True):
-            nc = {"api_key": api_key, "model": model, "temperature": temperature,
-                  "max_tokens": max_tokens, "top_p": top_p, "system_prompt": system_prompt}
-            st.session_state.config = nc
-            st.session_state.api_key_input = api_key
-            save_config(nc)
-            st.success("저장 완료!")
-    with c2:
-        if st.button("🔗 연결 테스트", use_container_width=True):
-            with st.spinner("테스트 중..."):
-                ok, msg = test_connection(api_key, model)
-            (st.success if ok else st.error)(msg)
+    st.title("⚙️ 관리 패널")
+    tab_cfg, tab_status = st.tabs(["🔧 설정", "📊 현재 상태"])
 
-# ── Tabs ─────────────────────────────────────────────────────────────────────
-tab_status, tab_chat = st.tabs(["📊 현재 설정", "💬 채팅 테스트"])
+    # ── 설정 탭 ──
+    with tab_cfg:
+        st.subheader("🔑 API 설정")
+        api_key = st.text_input(
+            "OpenAI API Key",
+            value=st.session_state.api_key_input,
+            type="password",
+            placeholder="sk-...",
+        )
+        st.divider()
+        st.subheader("🤖 모델 설정")
+        model = st.selectbox(
+            "모델 선택",
+            options=AVAILABLE_MODELS,
+            index=AVAILABLE_MODELS.index(st.session_state.config["model"])
+            if st.session_state.config["model"] in AVAILABLE_MODELS
+            else 0,
+        )
+        temperature = st.slider("Temperature", 0.0, 2.0,
+                                float(st.session_state.config["temperature"]), 0.05)
+        max_tokens  = st.slider("Max Tokens", 64, 4096,
+                                int(st.session_state.config["max_tokens"]), 64)
+        top_p       = st.slider("Top P", 0.0, 1.0,
+                                float(st.session_state.config["top_p"]), 0.05)
+        system_prompt = st.text_area("System Prompt",
+                                     value=st.session_state.config["system_prompt"],
+                                     height=100)
+        st.divider()
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("💾 저장", use_container_width=True):
+                nc = {"api_key": api_key, "model": model, "temperature": temperature,
+                      "max_tokens": max_tokens, "top_p": top_p, "system_prompt": system_prompt}
+                st.session_state.config = nc
+                st.session_state.api_key_input = api_key
+                save_config(nc)
+                st.success("저장 완료!")
+        with c2:
+            if st.button("🔗 연결 테스트", use_container_width=True):
+                with st.spinner("테스트 중..."):
+                    ok, msg = test_connection(api_key, model)
+                (st.success if ok else st.error)(msg)
 
-with tab_status:
-    st.subheader("현재 적용된 설정")
-    cfg = st.session_state.config
-    key = cfg["api_key"]
-    masked = key[:7] + "..." + key[-4:] if len(key) > 11 else ("(미입력)" if not key else key)
-    c1, c2 = st.columns(2)
-    with c1:
+    # ── 현재 상태 탭 ──
+    with tab_status:
+        cfg = st.session_state.config
+        key = cfg["api_key"]
+        masked = key[:7] + "..." + key[-4:] if len(key) > 11 else ("(미입력)" if not key else key)
+
+        st.subheader("현재 적용된 설정")
         st.metric("API Key", masked)
         st.metric("모델", cfg["model"])
         st.metric("Temperature", cfg["temperature"])
-    with c2:
         st.metric("Max Tokens", cfg["max_tokens"])
         st.metric("Top P", cfg["top_p"])
-    st.markdown("**System Prompt**")
-    st.info(cfg["system_prompt"])
-    if Path(CONFIG_FILE).exists():
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            raw = json.load(f)
-        if raw.get("api_key"):
-            raw["api_key"] = masked
-        st.markdown("**저장된 config.json**")
-        st.json(raw)
+        st.markdown("**System Prompt**")
+        st.info(cfg["system_prompt"])
 
-with tab_chat:
-    if not st.session_state.config["api_key"]:
-        st.warning("사이드바에서 API 키를 입력하고 저장하세요.")
-    elif not OPENAI_AVAILABLE:
-        st.error("openai 패키지가 필요합니다: `pip install openai`")
-    else:
-        model_name = st.session_state.config["model"]
+        if Path(CONFIG_FILE).exists():
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            if raw.get("api_key"):
+                raw["api_key"] = masked
+            st.markdown("**config.json**")
+            st.json(raw)
 
-        # 메신저 UI (입력창 포함)
-        components.html(
-            build_messenger_html(st.session_state.chat_history, model_name),
-            height=580,
-            scrolling=False,
-        )
+# ── 메인: 챗봇 화면 ──────────────────────────────────────────────────────────
+st.title("💬 OpenAI 챗봇")
 
-        if st.session_state.chat_history:
-            if st.button("🗑️ 대화 초기화"):
-                st.session_state.chat_history = []
-                st.rerun()
+if not st.session_state.config["api_key"]:
+    st.warning("왼쪽 사이드바 **🔧 설정** 탭에서 API 키를 입력하고 저장하세요.")
+elif not OPENAI_AVAILABLE:
+    st.error("openai 패키지가 필요합니다: `pip install openai`")
+else:
+    model_name = st.session_state.config["model"]
 
-        # ── 숨겨진 브리지 form (iframe JS가 트리거, display:none이라 보이지 않음) ──
-        with st.form("chat_bridge", clear_on_submit=True):
-            bridge_text = st.text_input("_msg", label_visibility="hidden")
-            bridge_submit = st.form_submit_button("전송")
+    components.html(
+        build_messenger_html(st.session_state.chat_history, model_name),
+        height=580,
+        scrolling=False,
+    )
 
-        if bridge_submit and bridge_text:
-            now = datetime.now().strftime("%H:%M")
-            st.session_state.chat_history.append(
-                {"role": "user", "content": bridge_text, "time": now}
-            )
-            try:
-                api_msgs = [{"role": m["role"], "content": m["content"]}
-                            for m in st.session_state.chat_history]
-                with st.spinner("답변 생성 중..."):
-                    reply = send_message(
-                        st.session_state.config["api_key"],
-                        st.session_state.config,
-                        api_msgs,
-                    )
-                st.session_state.chat_history.append(
-                    {"role": "assistant", "content": reply,
-                     "time": datetime.now().strftime("%H:%M")}
-                )
-            except Exception as e:
-                st.session_state.chat_history.append(
-                    {"role": "assistant", "content": f"오류: {e}",
-                     "time": datetime.now().strftime("%H:%M")}
-                )
+    if st.session_state.chat_history:
+        if st.button("🗑️ 대화 초기화"):
+            st.session_state.chat_history = []
             st.rerun()
+
+    # 숨겨진 브리지 form
+    with st.form("chat_bridge", clear_on_submit=True):
+        bridge_text = st.text_input("_msg", label_visibility="hidden")
+        bridge_submit = st.form_submit_button("전송")
+
+    if bridge_submit and bridge_text:
+        now = datetime.now().strftime("%H:%M")
+        st.session_state.chat_history.append(
+            {"role": "user", "content": bridge_text, "time": now}
+        )
+        try:
+            api_msgs = [{"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.chat_history]
+            with st.spinner("답변 생성 중..."):
+                reply = send_message(
+                    st.session_state.config["api_key"],
+                    st.session_state.config,
+                    api_msgs,
+                )
+            st.session_state.chat_history.append(
+                {"role": "assistant", "content": reply,
+                 "time": datetime.now().strftime("%H:%M")}
+            )
+        except Exception as e:
+            st.session_state.chat_history.append(
+                {"role": "assistant", "content": f"오류: {e}",
+                 "time": datetime.now().strftime("%H:%M")}
+            )
+        st.rerun()
