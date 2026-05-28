@@ -105,9 +105,11 @@ st.markdown("""
     border-radius: 20px;
 }
 
-/* ── 상단 툴바(공유·별표)만 숨김, 사이드바 토글은 유지 ── */
-[data-testid="stToolbar"] { display: none !important; }
-[data-testid="stDecoration"] { display: none !important; }
+/* ── 공유·배포·별표 버튼만 숨김 (사이드바 토글 유지) ── */
+[data-testid="stDeployButton"]   { display: none !important; }
+[data-testid="stStarButton"]     { display: none !important; }
+[data-testid="stMainMenuButton"] { display: none !important; }
+[data-testid="stDecoration"]     { display: none !important; }
 #MainMenu { display: none !important; }
 .block-container { padding-top: 1rem !important; }
 
