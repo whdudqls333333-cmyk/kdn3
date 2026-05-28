@@ -361,22 +361,23 @@ with col_schedule:
             st.progress(done_count / total, text=f"{done_count}/{total} 완료")
 
             to_delete = []
-            for i, item in enumerate(items):
-                c_chk, c_title, c_del = st.columns([1, 5, 1])
-                with c_chk:
-                    checked = st.checkbox("", value=item["done"], key=f"sched_{sel}_{i}",
-                                         label_visibility="collapsed")
-                    if checked != item["done"]:
-                        st.session_state.schedule[sel][i]["done"] = checked
-                        st.rerun()
-                with c_title:
-                    label = f"~~{item['task']}~~" if item["done"] else item["task"]
-                    if st.button(label, key=f"detail_{sel}_{i}", use_container_width=True,
-                                 type="tertiary"):
-                        show_detail(sel, i)
-                with c_del:
-                    if st.button("✕", key=f"del_{sel}_{i}", help="삭제"):
-                        to_delete.append(i)
+            with st.container(height=240):
+                for i, item in enumerate(items):
+                    c_chk, c_title, c_del = st.columns([1, 5, 1])
+                    with c_chk:
+                        checked = st.checkbox("", value=item["done"], key=f"sched_{sel}_{i}",
+                                             label_visibility="collapsed")
+                        if checked != item["done"]:
+                            st.session_state.schedule[sel][i]["done"] = checked
+                            st.rerun()
+                    with c_title:
+                        label = f"~~{item['task']}~~" if item["done"] else item["task"]
+                        if st.button(label, key=f"detail_{sel}_{i}", use_container_width=True,
+                                     type="tertiary"):
+                            show_detail(sel, i)
+                    with c_del:
+                        if st.button("✕", key=f"del_{sel}_{i}", help="삭제"):
+                            to_delete.append(i)
 
             if to_delete:
                 st.session_state.schedule[sel] = [
