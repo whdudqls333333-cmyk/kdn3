@@ -317,40 +317,34 @@ html, body {{
     this.style.height = Math.min(this.scrollHeight, 90) + 'px';
   }});
 
-  /* Streamlit chat_input 브리지 */
+  /* Streamlit form 브리지 — st.form(hidden) 을 타겟 */
   function triggerStreamlit(text) {{
     try {{
       var pd = window.parent.document;
-      var ta =
-        pd.querySelector('[data-testid="stChatInput"] textarea') ||
-        pd.querySelector('textarea');
-      if (!ta) return false;
+      /* 숨겨진 st.form 안의 input 탐색 */
+      var formWrap = pd.querySelector('[data-testid="stForm"]');
+      if (!formWrap) {{ console.warn('[Bridge] stForm not found'); return false; }}
+
+      var inp = formWrap.querySelector('input');
+      if (!inp) {{ console.warn('[Bridge] input not found'); return false; }}
 
       /* React 내부 setter로 값 주입 */
       var setter = Object.getOwnPropertyDescriptor(
-        window.parent.HTMLTextAreaElement.prototype, 'value'
+        window.parent.HTMLInputElement.prototype, 'value'
       ).set;
-      setter.call(ta, text);
-      ta.dispatchEvent(new window.parent.Event('input', {{ bubbles: true }}));
+      setter.call(inp, text);
+      inp.dispatchEvent(new window.parent.Event('input', {{ bubbles: true }}));
+      inp.dispatchEvent(new window.parent.Event('change', {{ bubbles: true }}));
 
       /* 제출 버튼 클릭 */
-      var btn =
-        pd.querySelector('[data-testid="stChatInput"] button') ||
-        (ta.closest('form') && ta.closest('form').querySelector('button[type="submit"]'));
+      var btn = formWrap.querySelector('[data-testid="stFormSubmitButton"] button') ||
+                formWrap.querySelector('button');
       if (btn) {{
-        setTimeout(function () {{ btn.click(); }}, 80);
-        return true;
-      }}
-      /* 버튼 없으면 form submit */
-      var form = ta.closest('form');
-      if (form) {{
-        setTimeout(function () {{
-          form.dispatchEvent(new window.parent.Event('submit', {{ bubbles: true, cancelable: true }}));
-        }}, 80);
+        setTimeout(function () {{ btn.click(); }}, 100);
         return true;
       }}
     }} catch (e) {{
-      console.warn('[Messenger] bridge error:', e);
+      console.warn('[Bridge] error:', e);
     }}
     return false;
   }}
@@ -383,21 +377,11 @@ html, body {{
 st.set_page_config(page_title="OpenAI 설정 관리", page_icon="⚙️", layout="wide")
 st.title("⚙️ OpenAI API 설정 관리")
 
-# Streamlit 기본 chat_input을 완전히 화면 밖으로 추방
+# 브리지용 hidden form 을 완전히 숨김 (display:none 은 JS click 에도 동작함)
 st.markdown("""
 <style>
-section[data-testid="stBottom"],
-section[data-testid="stBottom"] * {
-    position: fixed !important;
-    top: -9999px !important;
-    left: -9999px !important;
-    width: 1px !important;
-    height: 1px !important;
-    overflow: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    z-index: -9999 !important;
-    clip: rect(0 0 0 0) !important;
+[data-testid="stForm"] {
+    display: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -498,11 +482,15 @@ with tab_chat:
                 st.session_state.chat_history = []
                 st.rerun()
 
-        # 숨겨진 Streamlit chat_input — iframe JS가 이것을 트리거함
-        if prompt := st.chat_input(""):
+        # ── 숨겨진 브리지 form (iframe JS가 트리거, display:none이라 보이지 않음) ──
+        with st.form("chat_bridge", clear_on_submit=True):
+            bridge_text = st.text_input("_msg", label_visibility="hidden")
+            bridge_submit = st.form_submit_button("전송")
+
+        if bridge_submit and bridge_text:
             now = datetime.now().strftime("%H:%M")
             st.session_state.chat_history.append(
-                {"role": "user", "content": prompt, "time": now}
+                {"role": "user", "content": bridge_text, "time": now}
             )
             try:
                 api_msgs = [{"role": m["role"], "content": m["content"]}
