@@ -264,21 +264,39 @@ with col_chat:
                         st.session_state.chat_history.append(
                             {"role": "assistant", "content": err})
 
+# ── 일정 상세 팝업 ────────────────────────────────────────────────────────────
+@st.dialog("📋 일정 상세")
+def show_detail(idx: int):
+    item = st.session_state.schedule[idx]
+    st.markdown(f"### {item['task']}")
+    st.divider()
+    st.markdown(item["detail"] if item["detail"] else "_세부 내용이 없습니다._")
+    st.divider()
+    done_label = "✅ 완료 취소" if item["done"] else "☑️ 완료 처리"
+    if st.button(done_label, use_container_width=True):
+        st.session_state.schedule[idx]["done"] = not item["done"]
+        st.rerun()
+
 # ── 우측: 오늘의 일정 ─────────────────────────────────────────────────────────
 with col_schedule:
     from datetime import date
     today = date.today().strftime("%Y년 %m월 %d일")
 
     with st.container(border=True):
-        st.markdown(f"#### 📅 오늘의 일정")
+        st.markdown("#### 📅 오늘의 일정")
         st.caption(today)
 
-        # 일정 추가
+        # 일정 추가 폼 (타이틀 + 세부내용)
         with st.form("add_schedule", clear_on_submit=True):
-            new_task = st.text_input("일정 입력", placeholder="일정을 입력하세요", label_visibility="collapsed")
+            new_task = st.text_input("타이틀", placeholder="일정 제목을 입력하세요")
+            new_detail = st.text_area("세부내용", placeholder="세부 내용을 입력하세요 (선택)", height=80)
             if st.form_submit_button("+ 추가", use_container_width=True):
                 if new_task.strip():
-                    st.session_state.schedule.append({"task": new_task.strip(), "done": False})
+                    st.session_state.schedule.append({
+                        "task": new_task.strip(),
+                        "detail": new_detail.strip(),
+                        "done": False,
+                    })
                     st.rerun()
 
         st.divider()
@@ -293,17 +311,19 @@ with col_schedule:
 
             to_delete = []
             for i, item in enumerate(st.session_state.schedule):
-                c1, c2 = st.columns([5, 1])
-                with c1:
-                    checked = st.checkbox(
-                        item["task"] if not item["done"] else f"~~{item['task']}~~",
-                        value=item["done"],
-                        key=f"sched_{i}",
-                    )
+                c_chk, c_title, c_del = st.columns([1, 5, 1])
+                with c_chk:
+                    checked = st.checkbox("", value=item["done"], key=f"sched_{i}",
+                                         label_visibility="collapsed")
                     if checked != item["done"]:
                         st.session_state.schedule[i]["done"] = checked
                         st.rerun()
-                with c2:
+                with c_title:
+                    label = f"~~{item['task']}~~" if item["done"] else item["task"]
+                    if st.button(label, key=f"detail_{i}", use_container_width=True,
+                                 type="tertiary" if not item["done"] else "tertiary"):
+                        show_detail(i)
+                with c_del:
                     if st.button("✕", key=f"del_{i}", help="삭제"):
                         to_delete.append(i)
 
@@ -315,8 +335,10 @@ with col_schedule:
                 st.rerun()
 
             if done_count == total:
-                st.success("모든 일정을 완료했습니다! 🎉")
+                st.success("모든 일정 완료! 🎉")
 
             if st.button("완료 항목 삭제", use_container_width=True):
-                st.session_state.schedule = [s for s in st.session_state.schedule if not s["done"]]
+                st.session_state.schedule = [
+                    s for s in st.session_state.schedule if not s["done"]
+                ]
                 st.rerun()
