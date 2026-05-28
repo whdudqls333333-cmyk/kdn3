@@ -253,10 +253,8 @@ with col_cal:
     # 일정 데이터를 FullCalendar 이벤트 형식으로 변환
     calendar_events = []
     for d, items in st.session_state.schedule.items():
-        done_count = sum(1 for it in items if it["done"])
-        total = len(items)
-        if total > 0:
-            color = "#4CAF50" if done_count == total else "#1976D2"
+        for item in items:
+            color = "#4CAF50" if item["done"] else "#E53935"
             calendar_events.append({
                 "title": "",
                 "start": d,
