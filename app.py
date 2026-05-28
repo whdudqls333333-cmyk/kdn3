@@ -273,7 +273,7 @@ with col_cal:
             "center": "title",
             "right": "",
         },
-        "height": 320,
+        "height": 480,
         "selectable": True,
         "dateClick": True,
     }
