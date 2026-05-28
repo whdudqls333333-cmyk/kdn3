@@ -232,6 +232,27 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ── 일정 추가 팝업 ────────────────────────────────────────────────────────────
+@st.dialog("➕ 일정 추가")
+def add_schedule_dialog(date_key: str):
+    try:
+        d = date.fromisoformat(date_key)
+        st.caption(d.strftime("%Y년 %m월 %d일"))
+    except Exception:
+        st.caption(date_key)
+    new_task = st.text_input("타이틀", placeholder="일정 제목을 입력하세요")
+    new_detail = st.text_area("세부내용", placeholder="세부 내용을 입력하세요 (선택)", height=100)
+    if st.button("추가", use_container_width=True, type="primary"):
+        if new_task.strip():
+            if date_key not in st.session_state.schedule:
+                st.session_state.schedule[date_key] = []
+            st.session_state.schedule[date_key].append({
+                "task": new_task.strip(),
+                "detail": new_detail.strip(),
+                "done": False,
+            })
+            st.rerun()
+
 # ── 일정 상세 팝업 ────────────────────────────────────────────────────────────
 @st.dialog("📋 일정 상세")
 def show_detail(date_key: str, idx: int):
@@ -328,24 +349,17 @@ with col_schedule:
     with st.container(border=True):
         st.markdown(f"#### {date_label}")
         if not is_today:
-            if st.button("오늘로 이동", use_container_width=True):
-                st.session_state.selected_date = today_str
-                st.rerun()
-
-        # 일정 추가 폼
-        with st.form("add_schedule", clear_on_submit=True):
-            new_task = st.text_input("타이틀", placeholder="일정 제목을 입력하세요")
-            new_detail = st.text_area("세부내용", placeholder="세부 내용을 입력하세요 (선택)", height=80)
-            if st.form_submit_button("+ 추가", use_container_width=True):
-                if new_task.strip():
-                    if sel not in st.session_state.schedule:
-                        st.session_state.schedule[sel] = []
-                    st.session_state.schedule[sel].append({
-                        "task": new_task.strip(),
-                        "detail": new_detail.strip(),
-                        "done": False,
-                    })
+            c1, c2 = st.columns(2)
+            with c1:
+                if st.button("오늘로 이동", use_container_width=True):
+                    st.session_state.selected_date = today_str
                     st.rerun()
+            with c2:
+                if st.button("+ 일정 추가", use_container_width=True, type="primary"):
+                    add_schedule_dialog(sel)
+        else:
+            if st.button("+ 일정 추가", use_container_width=True, type="primary"):
+                add_schedule_dialog(sel)
 
         st.divider()
 
