@@ -394,7 +394,7 @@ st.markdown("""
 [data-testid="stSidebar"] select { font-size: 12px !important; }
 [data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 14px !important; }
 [data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 11px !important; }
-[data-testid="stSidebar"] button { font-size: 12px !important; }
+[data-testid="stSidebar"] button { font-size: 12px !important; white-space: nowrap !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -448,7 +448,7 @@ with st.sidebar:
                 save_config(nc)
                 st.success("저장 완료!")
         with c2:
-            if st.button("🔗 연결 테스트", use_container_width=True):
+            if st.button("🔗 테스트", use_container_width=True):
                 with st.spinner("테스트 중..."):
                     ok, msg = test_connection(api_key, model)
                 (st.success if ok else st.error)(msg)
