@@ -232,103 +232,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ── 달력 ─────────────────────────────────────────────────────────────────────
-# 일정 데이터를 FullCalendar 이벤트 형식으로 변환
-calendar_events = []
-for d, items in st.session_state.schedule.items():
-    done_count = sum(1 for it in items if it["done"])
-    total = len(items)
-    if total > 0:
-        color = "#4CAF50" if done_count == total else "#1976D2"
-        calendar_events.append({
-            "title": f"{done_count}/{total} 완료",
-            "start": d,
-            "end": d,
-            "color": color,
-        })
-
-calendar_options = {
-    "initialView": "dayGridMonth",
-    "locale": "ko",
-    "headerToolbar": {
-        "left": "prev,next today",
-        "center": "title",
-        "right": "",
-    },
-    "height": 420,
-    "selectable": True,
-    "dateClick": True,
-}
-
-custom_css = """
-.fc-event { font-size: 11px; padding: 1px 4px; border-radius: 4px; }
-.fc-day-today { background-color: rgba(25, 118, 210, 0.08) !important; }
-.fc-toolbar-title { font-size: 16px !important; font-weight: 700; }
-.fc-button { font-size: 12px !important; padding: 3px 8px !important; }
-"""
-
-if CALENDAR_AVAILABLE:
-    cal_result = st_calendar(
-        events=calendar_events,
-        options=calendar_options,
-        custom_css=custom_css,
-        key="main_calendar",
-    )
-    # dateClick 이벤트로 날짜 선택
-    if cal_result and cal_result.get("dateClick"):
-        clicked = cal_result["dateClick"].get("date", "")[:10]
-        if clicked:
-            st.session_state.selected_date = clicked
-            st.rerun()
-else:
-    st.info("달력을 표시하려면 `pip install streamlit-calendar`를 실행하세요.")
-
-st.divider()
-
-col_chat, col_schedule = st.columns([3, 1])
-
-# ── 좌측: 챗봇 ───────────────────────────────────────────────────────────────
-with col_chat:
-    if not st.session_state.config["api_key"]:
-        st.warning("왼쪽 사이드바 **⚙️ 시스템 설정** 에서 API 키를 입력하고 저장하세요.")
-    elif not OPENAI_AVAILABLE:
-        st.error("openai 패키지가 필요합니다: `pip install openai`")
-    else:
-        with st.container(border=True):
-            for msg in st.session_state.chat_history:
-                with st.chat_message(msg["role"]):
-                    st.write(msg["content"])
-            if not st.session_state.chat_history:
-                st.caption("대화를 시작해보세요.")
-
-        if st.session_state.chat_history:
-            if st.button("🗑️ 대화 초기화"):
-                st.session_state.chat_history = []
-                st.rerun()
-
-        if prompt := st.chat_input("메시지를 입력하세요..."):
-            st.session_state.chat_history.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.write(prompt)
-            with st.chat_message("assistant"):
-                with st.spinner("답변 생성 중..."):
-                    try:
-                        api_msgs = [{"role": m["role"], "content": m["content"]}
-                                    for m in st.session_state.chat_history]
-                        reply = send_message(
-                            st.session_state.config["api_key"],
-                            st.session_state.config,
-                            api_msgs,
-                        )
-                        st.write(reply)
-                        st.session_state.chat_history.append(
-                            {"role": "assistant", "content": reply})
-                    except Exception as e:
-                        err = f"오류: {e}"
-                        st.error(err)
-                        st.session_state.chat_history.append(
-                            {"role": "assistant", "content": err})
-
 # ── 일정 상세 팝업 ────────────────────────────────────────────────────────────
 @st.dialog("📋 일정 상세")
 def show_detail(date_key: str, idx: int):
@@ -342,6 +245,61 @@ def show_detail(date_key: str, idx: int):
     if st.button(done_label, use_container_width=True):
         st.session_state.schedule[date_key][idx]["done"] = not item["done"]
         st.rerun()
+
+# ── 달력 + 일정 패널 (좌: 달력 / 우: 일정) ───────────────────────────────────
+col_cal, col_schedule = st.columns([3, 1])
+
+with col_cal:
+    # 일정 데이터를 FullCalendar 이벤트 형식으로 변환
+    calendar_events = []
+    for d, items in st.session_state.schedule.items():
+        done_count = sum(1 for it in items if it["done"])
+        total = len(items)
+        if total > 0:
+            color = "#4CAF50" if done_count == total else "#1976D2"
+            calendar_events.append({
+                "title": f"{done_count}/{total} 완료",
+                "start": d,
+                "end": d,
+                "color": color,
+            })
+
+    calendar_options = {
+        "initialView": "dayGridMonth",
+        "locale": "ko",
+        "headerToolbar": {
+            "left": "prev,next today",
+            "center": "title",
+            "right": "",
+        },
+        "height": 320,
+        "selectable": True,
+        "dateClick": True,
+    }
+
+    custom_css = """
+    .fc-event { font-size: 11px; padding: 1px 4px; border-radius: 4px; }
+    .fc-day-today { background-color: rgba(25, 118, 210, 0.08) !important; }
+    .fc-toolbar-title { font-size: 15px !important; font-weight: 700; }
+    .fc-button { font-size: 11px !important; padding: 2px 7px !important; }
+    .fc-col-header-cell { font-size: 12px !important; }
+    .fc-daygrid-day-number { font-size: 12px !important; }
+    """
+
+    if CALENDAR_AVAILABLE:
+        cal_result = st_calendar(
+            events=calendar_events,
+            options=calendar_options,
+            custom_css=custom_css,
+            key="main_calendar",
+        )
+        if cal_result and cal_result.get("dateClick"):
+            clicked = cal_result["dateClick"].get("date", "")[:10]
+            if clicked:
+                st.session_state.selected_date = clicked
+                st.rerun()
+    else:
+        st.info("달력을 표시하려면 `pip install streamlit-calendar`를 실행하세요.")
 
 # ── 우측: 선택된 날짜의 일정 ───────────────────────────────────────────────────
 with col_schedule:
@@ -424,3 +382,46 @@ with col_schedule:
                 if not st.session_state.schedule[sel]:
                     del st.session_state.schedule[sel]
                 st.rerun()
+
+st.divider()
+
+# ── 챗봇 (달력 아래 전체 너비) ────────────────────────────────────────────────
+if not st.session_state.config["api_key"]:
+    st.warning("왼쪽 사이드바 **⚙️ 시스템 설정** 에서 API 키를 입력하고 저장하세요.")
+elif not OPENAI_AVAILABLE:
+    st.error("openai 패키지가 필요합니다: `pip install openai`")
+else:
+    with st.container(border=True):
+        for msg in st.session_state.chat_history:
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
+        if not st.session_state.chat_history:
+            st.caption("대화를 시작해보세요.")
+
+    if st.session_state.chat_history:
+        if st.button("🗑️ 대화 초기화"):
+            st.session_state.chat_history = []
+            st.rerun()
+
+    if prompt := st.chat_input("메시지를 입력하세요..."):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+        with st.chat_message("assistant"):
+            with st.spinner("답변 생성 중..."):
+                try:
+                    api_msgs = [{"role": m["role"], "content": m["content"]}
+                                for m in st.session_state.chat_history]
+                    reply = send_message(
+                        st.session_state.config["api_key"],
+                        st.session_state.config,
+                        api_msgs,
+                    )
+                    st.write(reply)
+                    st.session_state.chat_history.append(
+                        {"role": "assistant", "content": reply})
+                except Exception as e:
+                    err = f"오류: {e}"
+                    st.error(err)
+                    st.session_state.chat_history.append(
+                        {"role": "assistant", "content": err})
