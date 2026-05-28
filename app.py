@@ -137,6 +137,8 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "api_key_input" not in st.session_state:
     st.session_state.api_key_input = st.session_state.config["api_key"]
+if "schedule" not in st.session_state:
+    st.session_state.schedule = []  # [{"task": str, "done": bool}]
 
 # ── Sidebar (탭: 설정 / 현재 상태) ──────────────────────────────────────────
 with st.sidebar:
@@ -218,48 +220,103 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-if not st.session_state.config["api_key"]:
-    st.warning("왼쪽 사이드바 **🔧 설정** 탭에서 API 키를 입력하고 저장하세요.")
-elif not OPENAI_AVAILABLE:
-    st.error("openai 패키지가 필요합니다: `pip install openai`")
-else:
-    # 대화 기록 출력 (테두리 컨테이너)
+col_chat, col_schedule = st.columns([3, 1])
+
+# ── 좌측: 챗봇 ───────────────────────────────────────────────────────────────
+with col_chat:
+    if not st.session_state.config["api_key"]:
+        st.warning("왼쪽 사이드바 **⚙️ 시스템 설정** 에서 API 키를 입력하고 저장하세요.")
+    elif not OPENAI_AVAILABLE:
+        st.error("openai 패키지가 필요합니다: `pip install openai`")
+    else:
+        with st.container(border=True):
+            for msg in st.session_state.chat_history:
+                with st.chat_message(msg["role"]):
+                    st.write(msg["content"])
+            if not st.session_state.chat_history:
+                st.caption("대화를 시작해보세요.")
+
+        if st.session_state.chat_history:
+            if st.button("🗑️ 대화 초기화"):
+                st.session_state.chat_history = []
+                st.rerun()
+
+        if prompt := st.chat_input("메시지를 입력하세요..."):
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.write(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("답변 생성 중..."):
+                    try:
+                        api_msgs = [{"role": m["role"], "content": m["content"]}
+                                    for m in st.session_state.chat_history]
+                        reply = send_message(
+                            st.session_state.config["api_key"],
+                            st.session_state.config,
+                            api_msgs,
+                        )
+                        st.write(reply)
+                        st.session_state.chat_history.append(
+                            {"role": "assistant", "content": reply})
+                    except Exception as e:
+                        err = f"오류: {e}"
+                        st.error(err)
+                        st.session_state.chat_history.append(
+                            {"role": "assistant", "content": err})
+
+# ── 우측: 오늘의 일정 ─────────────────────────────────────────────────────────
+with col_schedule:
+    from datetime import date
+    today = date.today().strftime("%Y년 %m월 %d일")
+
     with st.container(border=True):
-        for msg in st.session_state.chat_history:
-            with st.chat_message(msg["role"]):
-                st.write(msg["content"])
-        if not st.session_state.chat_history:
-            st.caption("대화를 시작해보세요.")
+        st.markdown(f"#### 📅 오늘의 일정")
+        st.caption(today)
 
-    # 대화 초기화 버튼
-    if st.session_state.chat_history:
-        if st.button("🗑️ 대화 초기화"):
-            st.session_state.chat_history = []
-            st.rerun()
+        # 일정 추가
+        with st.form("add_schedule", clear_on_submit=True):
+            new_task = st.text_input("일정 입력", placeholder="일정을 입력하세요", label_visibility="collapsed")
+            if st.form_submit_button("+ 추가", use_container_width=True):
+                if new_task.strip():
+                    st.session_state.schedule.append({"task": new_task.strip(), "done": False})
+                    st.rerun()
 
-    # 메시지 입력
-    if prompt := st.chat_input("메시지를 입력하세요..."):
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
+        st.divider()
 
-        with st.chat_message("assistant"):
-            with st.spinner("답변 생성 중..."):
-                try:
-                    api_msgs = [{"role": m["role"], "content": m["content"]}
-                                for m in st.session_state.chat_history]
-                    reply = send_message(
-                        st.session_state.config["api_key"],
-                        st.session_state.config,
-                        api_msgs,
+        # 일정 목록
+        if not st.session_state.schedule:
+            st.caption("등록된 일정이 없습니다.")
+        else:
+            done_count = sum(1 for s in st.session_state.schedule if s["done"])
+            total = len(st.session_state.schedule)
+            st.progress(done_count / total, text=f"{done_count}/{total} 완료")
+
+            to_delete = []
+            for i, item in enumerate(st.session_state.schedule):
+                c1, c2 = st.columns([5, 1])
+                with c1:
+                    checked = st.checkbox(
+                        item["task"] if not item["done"] else f"~~{item['task']}~~",
+                        value=item["done"],
+                        key=f"sched_{i}",
                     )
-                    st.write(reply)
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": reply}
-                    )
-                except Exception as e:
-                    err = f"오류: {e}"
-                    st.error(err)
-                    st.session_state.chat_history.append(
-                        {"role": "assistant", "content": err}
-                    )
+                    if checked != item["done"]:
+                        st.session_state.schedule[i]["done"] = checked
+                        st.rerun()
+                with c2:
+                    if st.button("✕", key=f"del_{i}", help="삭제"):
+                        to_delete.append(i)
+
+            if to_delete:
+                st.session_state.schedule = [
+                    s for j, s in enumerate(st.session_state.schedule)
+                    if j not in to_delete
+                ]
+                st.rerun()
+
+            if done_count == total:
+                st.success("모든 일정을 완료했습니다! 🎉")
+
+            if st.button("완료 항목 삭제", use_container_width=True):
+                st.session_state.schedule = [s for s in st.session_state.schedule if not s["done"]]
+                st.rerun()
