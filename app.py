@@ -379,6 +379,22 @@ st.set_page_config(page_title="OpenAI 챗봇", page_icon="🤖", layout="wide")
 st.markdown("""
 <style>
 [data-testid="stForm"] { display: none !important; }
+
+/* 사이드바 전체 폰트 축소 */
+[data-testid="stSidebar"] { font-size: 12px !important; }
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div { font-size: 12px !important; }
+[data-testid="stSidebar"] h1 { font-size: 16px !important; }
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 { font-size: 13px !important; }
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea,
+[data-testid="stSidebar"] select { font-size: 12px !important; }
+[data-testid="stSidebar"] [data-testid="stMetricValue"] { font-size: 14px !important; }
+[data-testid="stSidebar"] [data-testid="stMetricLabel"] { font-size: 11px !important; }
+[data-testid="stSidebar"] button { font-size: 12px !important; }
 </style>
 """, unsafe_allow_html=True)
 
