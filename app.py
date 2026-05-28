@@ -146,7 +146,7 @@ if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "api_key_input" not in st.session_state:
     st.session_state.api_key_input = st.session_state.config["api_key"]
-if "schedule" not in st.session_state:
+if "schedule" not in st.session_state or isinstance(st.session_state.schedule, list):
     # dict keyed by "YYYY-MM-DD": [{"task": str, "detail": str, "done": bool}]
     st.session_state.schedule = {}
 if "selected_date" not in st.session_state:
